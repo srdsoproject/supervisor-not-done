@@ -45,7 +45,7 @@ jobs:
           if [ -f "main.py" ]; then
             python main.py
           else
-            echo "❌ ERROR: main.py not found in repository root!"
+            echo "❌ ERROR: main.py not found!"
             ls -la
             exit 1
           fi
