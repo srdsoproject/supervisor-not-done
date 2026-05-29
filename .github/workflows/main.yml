@@ -29,18 +29,11 @@ jobs:
         run: |
           pip install gspread google-auth gspread-formatting
 
-      - name: Create credentials.json (Fixed)
+      - name: Create credentials.json from Base64
         run: |
-          cat > credentials.json << 'EOF'
-          ${{ secrets.GOOGLE_CREDENTIALS }}
-          EOF
-
-      - name: Verify credentials.json
-        run: |
-          ls -la
-          echo "File size:"
-          wc -c credentials.json
-          head -c 200 credentials.json
+          echo "${{ secrets.GOOGLE_CREDENTIALS }}" | base64 --decode > credentials.json
+          echo "✅ credentials.json created successfully"
+          ls -la credentials.json
 
       - name: Run Inspection Monitor
         env:
