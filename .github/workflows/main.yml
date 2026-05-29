@@ -29,26 +29,25 @@ jobs:
         run: |
           pip install gspread google-auth gspread-formatting
 
-      - name: Create credentials.json
+      - name: Create credentials.json (Fixed)
         run: |
-          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+          cat > credentials.json << 'EOF'
+          ${{ secrets.GOOGLE_CREDENTIALS }}
+          EOF
 
-      - name: List Files (Debug)
-        run: ls -la
+      - name: Verify credentials.json
+        run: |
+          ls -la
+          echo "File size:"
+          wc -c credentials.json
+          head -c 200 credentials.json
 
       - name: Run Inspection Monitor
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
           EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
-        run: |
-          if [ -f "main.py" ]; then
-            python main.py
-          else
-            echo "❌ ERROR: main.py not found!"
-            ls -la
-            exit 1
-          fi
+        run: python main.py
 
       - name: Upload Logs
         uses: actions/upload-artifact@v4
