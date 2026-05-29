@@ -33,12 +33,22 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
 
+      - name: List Files (Debug)
+        run: ls -la
+
       - name: Run Inspection Monitor
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
           EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
-        run: python monitor_inspections.py
+        run: |
+          if [ -f "main.py" ]; then
+            python main.py
+          else
+            echo "❌ ERROR: main.py not found in repository root!"
+            ls -la
+            exit 1
+          fi
 
       - name: Upload Logs
         uses: actions/upload-artifact@v4
