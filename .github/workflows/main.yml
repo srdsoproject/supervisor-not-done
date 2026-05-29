@@ -14,14 +14,14 @@ jobs:
   monitor:
     runs-on: ubuntu-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # Force Node 24
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # Force Node.js 24
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6     # Updated to v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6   # Updated to v6 (Node 24 compatible)
         with:
           python-version: '3.11'
 
@@ -39,3 +39,12 @@ jobs:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
           EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
         run: python monitor_inspections.py
+
+      - name: Upload Logs (Optional)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inspection-logs
+          path: |
+            *.json
+            *.log
