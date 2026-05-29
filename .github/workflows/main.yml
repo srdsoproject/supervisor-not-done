@@ -1,0 +1,44 @@
+name: Daily Inspection Monitor
+
+on:
+  schedule:
+    - cron: '0 1 * * *'     # 01:00 UTC
+    - cron: '0 6 * * *'     # 06:00 UTC
+    - cron: '30 10 * * *'   # 10:30 UTC
+    - cron: '0 15 * * *'    # 15:00 UTC
+    - cron: '0 19 * * *'    # 19:00 UTC
+
+  workflow_dispatch:        # Allows manual trigger
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install gspread google-auth google-auth-oauthlib gspread-formatting
+
+      - name: Create credentials.json
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+
+      - name: Run Inspection Script
+        env:
+          LAST_RUN_FILE: last_inspection_timestamp.json
+        run: python your_script.py
+        # Change `your_script.py` to your actual filename (e.g. main.py or monitor.py)
+
+      - name: Upload Last Run File (Optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-run-timestamp
+          path: last_inspection_timestamp.json
