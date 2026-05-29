@@ -3,7 +3,7 @@ name: Inspection Monitor
 on:
   schedule:
     - cron: '30 19 * * *'    # 01:00 IST
-    - cron: '30 0 * * *'     # 06:00 IST
+    - cron: '30 0 * * *'     # 06:00 IST  
     - cron: '0 5 * * *'      # 10:30 IST
     - cron: '30 9 * * *'     # 15:00 IST
     - cron: '30 13 * * *'    # 19:00 IST
@@ -13,9 +13,12 @@ on:
 jobs:
   monitor:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # Force Node 24
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,12 +26,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: pip install gspread google-auth gspread-formatting
+        run: |
+          pip install gspread google-auth gspread-formatting
 
       - name: Create credentials.json
-        run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
 
-      - name: Run Script
+      - name: Run Inspection Monitor
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
