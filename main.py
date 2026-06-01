@@ -40,14 +40,12 @@ EMAIL_RECEIVER = os.getenv('EMAIL_RECEIVER')
 # ────────────────────────────────────────────────
 
 def get_client():
-    # Allows passing the credentials raw JSON string directly via environment variables if desired
     creds_json = os.getenv('GOOGLE_CREDS_JSON')
     if creds_json:
         info = json.loads(creds_json)
-        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        return gspread.authorize(Credentials.from_service_account_info(info, scopes=SCOPES))
     else:
-        creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
-    return gspread.authorize(creds)
+        return gspread.authorize(Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES))
 
 def retry_api_call(func, max_attempts=6, base_delay=5):
     for attempt in range(1, max_attempts + 1):
