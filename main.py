@@ -12,7 +12,7 @@ from gspread.exceptions import APIError
 from gspread_formatting import CellFormat, TextFormat, Color, format_cell_range
 
 # ────────────────────────────────────────────────
-# Config
+# Config (Secured via Environment Variables)
 # ────────────────────────────────────────────────
 
 SCOPES = [
@@ -21,14 +21,13 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-CREDS_FILE = 'credentials.json'
+# Paths and IDs loaded from environment variables
+CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'credentials.json')
+SHEET1_ID = os.getenv('GOOGLE_SHEET1_ID')
+SHEET2_ID = os.getenv('GOOGLE_SHEET2_ID')
+WORKSHEET2_NAME = os.getenv('GOOGLE_WORKSHEET2_NAME', 'Inspections')
 
-SHEET1_ID = '196SQ0cCWFqfXm41bgz_CrvNvv1eMnZU1vltossTfRbY'
-SHEET2_ID = '1WtNy5EYMFEFI0gWcipqFse_aaBT6fwB3erVDYLVNAGY'
-
-WORKSHEET2_NAME = 'Inspections'
 LAST_RUN_FILE = 'last_inspection_timestamp.json'
-
 RED = Color(red=1.0, green=0.0, blue=0.0)
 
 # Email Configuration (from GitHub Secrets)
@@ -41,7 +40,13 @@ EMAIL_RECEIVER = os.getenv('EMAIL_RECEIVER')
 # ────────────────────────────────────────────────
 
 def get_client():
-    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+    # Allows passing the credentials raw JSON string directly via environment variables if desired
+    creds_json = os.getenv('GOOGLE_CREDS_JSON')
+    if creds_json:
+        info = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    else:
+        creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
     return gspread.authorize(creds)
 
 def retry_api_call(func, max_attempts=6, base_delay=5):
@@ -62,11 +67,11 @@ def retry_api_call(func, max_attempts=6, base_delay=5):
 # ────────────────────────────────────────────────
 
 def get_current_worksheet_name():
-    """Returns format like: 'June 01', 'June 26', etc."""
+    """Returns format like: 'June 26', 'July 26', etc. based on Month and Year"""
     now = datetime.now()
-    month_name = now.strftime('%B')   # Full month name
-    day = now.strftime('%d')          # Two digits
-    return f"{month_name} {day}"
+    month_name = now.strftime('%B')   # Full month name (e.g., June)
+    year_short = now.strftime('%y')   # Two-digit year (e.g., 26)
+    return f"{month_name} {year_short}"
 
 # ────────────────────────────────────────────────
 # Phone Normalization
@@ -113,8 +118,12 @@ def mark_as_no(sheet, row_num):
 # ────────────────────────────────────────────────
 
 def process_new_inspections():
+    if not SHEET1_ID or not SHEET2_ID:
+        print("❌ Error: GOOGLE_SHEET1_ID or GOOGLE_SHEET2_ID environment variable is missing.")
+        return None
+
     client = get_client()
-    worksheet_name = get_current_worksheet_name()
+    worksheet_name = get_current_worksheet_name() # Dynamically calculates "June 26"
     
     print(f"Processing worksheet: {worksheet_name}")
 
@@ -138,9 +147,9 @@ def process_new_inspections():
         print(f"Failed to read main sheet: {e}")
         return None
 
-    # Collect today's rows
     today_rows = {}  # norm_phone → (row_num, current_status)
 
+    # 1. Look through the monthly sheet, but isolate ONLY today's rows
     for i, row in enumerate(data1[1:], start=2):
         if len(row) < 9:
             continue
@@ -149,7 +158,6 @@ def process_new_inspections():
         raw_phone = (row[8] if len(row) > 8 else '').strip()
         current_status = (row[5] if len(row) > 5 else '').strip().upper()
 
-        # Check if row is for today
         is_today = False
         if date_b:
             if (today_yyyy_mm_dd in date_b or 
@@ -187,13 +195,12 @@ def process_new_inspections():
 
     print(f"→ Found {len(today_inspections)} inspection(s) completed today")
 
-    # Process and Update
+    # 2. Update exclusively today's rows (Safe from touching tomorrow's/future schedules)
     for norm_phone, (row_num, current_status) in today_rows.items():
         if norm_phone in today_inspections:
             if current_status != 'YES':
                 mark_as_yes(sheet1, row_num)
         else:
-            # Only mark NO if it's not already YES (respect manual YES)
             if current_status not in ['YES']:
                 mark_as_no(sheet1, row_num)
 
@@ -210,6 +217,10 @@ def send_monthly_report():
     print("Generating Monthly Report...")
 
     try:
+        if not SHEET1_ID:
+            print("❌ Error: GOOGLE_SHEET1_ID configuration is missing.")
+            return False
+
         client = get_client()
         worksheet_name = get_current_worksheet_name()
         sheet1 = client.open_by_key(SHEET1_ID).worksheet(worksheet_name)
