@@ -2,7 +2,7 @@ name: Run Inspection Monitor
 
 on:
   schedule:
-    - cron: '0 18 * * *' # Example: Runs everyday at 6 PM UTC
+    - cron: '0 18 * * *' # Runs everyday at 6 PM UTC
   workflow_dispatch: # Allows manual triggering
 
 jobs:
@@ -23,7 +23,6 @@ jobs:
         pip install gspread google-auth gspread-formatting
 
     - name: Execute Monitor Script
-      # This mapping injects your GitHub Secrets directly into the script execution environment safely
       env:
         EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
@@ -31,6 +30,4 @@ jobs:
         GOOGLE_SHEET1_ID: ${{ secrets.GOOGLE_SHEET1_ID }}
         GOOGLE_SHEET2_ID: ${{ secrets.GOOGLE_SHEET2_ID }}
         GOOGLE_WORKSHEET2_NAME: ${{ secrets.GOOGLE_WORKSHEET2_NAME }}
-        # Uncomment below if you decide to hide credentials.json completely:
-        # GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
-      run: python your_script_name.py
+      run: python main.py
