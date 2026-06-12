@@ -5,6 +5,10 @@ on:
     - cron: '0 18 * * *' # Runs everyday at 6 PM UTC
   workflow_dispatch: # Allows manual triggering via the GitHub UI
 
+env:
+  # This clears out the Node.js deprecation warnings on the runner
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   run-script:
     runs-on: ubuntu-latest
@@ -30,5 +34,6 @@ jobs:
         GOOGLE_SHEET1_ID: ${{ secrets.GOOGLE_SHEET1_ID }}
         GOOGLE_SHEET2_ID: ${{ secrets.GOOGLE_SHEET2_ID }}
         GOOGLE_WORKSHEET2_NAME: ${{ secrets.GOOGLE_WORKSHEET2_NAME }}
-        GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDENTIALS }} # Maps your existing secret name to what the script expects
+        # Changed from GOOGLE_CREDS_JSON to match your Python script's environment lookup
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }} 
       run: python main.py
