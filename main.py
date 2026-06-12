@@ -40,6 +40,7 @@ EMAIL_RECEIVER = os.getenv('EMAIL_RECEIVER')
 # ────────────────────────────────────────────────
 
 def get_client():
+    # 🌟 FIXED: Changed from 'GOOGLE_CREDS_JSON' to 'GOOGLE_CREDENTIALS' to match your Workflow YAML
     creds_json = os.getenv('GOOGLE_CREDENTIALS')
     if creds_json:
         info = json.loads(creds_json)
@@ -97,9 +98,9 @@ def mark_as_yes(sheet, row_num):
         format_cell_range(sheet, f'F{row_num}:G{row_num}', CellFormat(
             textFormat=TextFormat(foregroundColor=None)
         ))
-        print(f"   → Marked as YES at row {row_num}")
+        print(f"    → Marked as YES at row {row_num}")
     except Exception as e:
-        print(f"   Failed to mark YES at row {row_num}: {e}")
+        print(f"    Failed to mark YES at row {row_num}: {e}")
 
 def mark_as_no(sheet, row_num):
     try:
@@ -107,9 +108,9 @@ def mark_as_no(sheet, row_num):
         format_cell_range(sheet, f'F{row_num}:G{row_num}', CellFormat(
             textFormat=TextFormat(foregroundColor=RED)
         ))
-        print(f"   ❌ Marked as NO at row {row_num}")
+        print(f"    ❌ Marked as NO at row {row_num}")
     except Exception as e:
-        print(f"   Failed to mark NO at row {row_num}: {e}")
+        print(f"    Failed to mark NO at row {row_num}: {e}")
 
 # ────────────────────────────────────────────────
 # Main Processing
@@ -205,10 +206,8 @@ def process_new_inspections():
                 print(f"Updating Sheet 1...")
                 mark_as_yes(sheet1, row_num_s1)
             
-            # 🌟 Update Sheet 2 (if it exists on Sheet 2 and isn't marked yet)
+            # 🌟 Update Sheet 2 (Assuming Column F handles tracking statuses here as well)
             if row_num_s2:
-                # Note: Assuming column F (index 5) is also the status column on Sheet 2.
-                # If Sheet 2 uses a different column for YES/NO, modify mark_as_yes/no to support dynamic columns!
                 print(f"Updating Sheet 2...")
                 mark_as_yes(sheet2, row_num_s2)
         else:
@@ -223,6 +222,7 @@ def process_new_inspections():
                 mark_as_no(sheet2, row_num_s2)
 
     return datetime.now()
+
 # ────────────────────────────────────────────────
 # Monthly Report
 # ────────────────────────────────────────────────
