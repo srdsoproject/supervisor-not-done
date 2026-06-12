@@ -137,7 +137,7 @@ def process_new_inspections():
     today_dd_mm_yyyy = today.strftime('%d/%m/%Y')
     today_dd_mm_dash = today.strftime('%d-%m-%Y')
 
-    # Read Main Sheet
+    # Read Main Sheet (Sheet 1)
     try:
         data1 = retry_api_call(lambda: sheet1.get_all_values())
         print(f"Read {len(data1)} rows from main sheet")
@@ -167,11 +167,11 @@ def process_new_inspections():
             norm_phone = normalize_phone(raw_phone)
             if norm_phone:
                 today_rows[norm_phone] = (i, current_status)
-                print(f"   Found today's row {i} → Phone: {norm_phone} | Status: {current_status}")
+                print(f"   Found today's row {i} in Sheet1 → Phone: {norm_phone} | Status: {current_status}")
 
     print(f"→ Found {len(today_rows)} officer(s) scheduled for today")
 
-    # Read Inspections Sheet
+    # Read Inspections Sheet (Sheet 2)
     try:
         data2 = retry_api_call(lambda: sheet2.get_all_values())
     except Exception as e:
@@ -179,8 +179,9 @@ def process_new_inspections():
         return None
 
     today_inspections = set()
+    today_inspections_rows = {} # 🌟 Maps norm_phone → row_num in Sheet 2
 
-    for row in data2[1:]:
+    for i, row in enumerate(data2[1:], start=2):
         if len(row) < 4:
             continue
         date_str = (row[0] or '').strip()
@@ -190,20 +191,38 @@ def process_new_inspections():
             norm_phone = normalize_phone(phone_raw)
             if norm_phone:
                 today_inspections.add(norm_phone)
+                today_inspections_rows[norm_phone] = i # 🌟 Store row index for Sheet 2
 
     print(f"→ Found {len(today_inspections)} inspection(s) completed today")
 
-    # 2. Update exclusively today's rows (Safe from touching tomorrow's/future schedules)
-    for norm_phone, (row_num, current_status) in today_rows.items():
+    # 2. Update today's rows on BOTH sheets
+    for norm_phone, (row_num_s1, current_status) in today_rows.items():
+        row_num_s2 = today_inspections_rows.get(norm_phone) # 🌟 Find matching row for Sheet 2
+
         if norm_phone in today_inspections:
+            # Update Sheet 1
             if current_status != 'YES':
-                mark_as_yes(sheet1, row_num)
+                print(f"Updating Sheet 1...")
+                mark_as_yes(sheet1, row_num_s1)
+            
+            # 🌟 Update Sheet 2 (if it exists on Sheet 2 and isn't marked yet)
+            if row_num_s2:
+                # Note: Assuming column F (index 5) is also the status column on Sheet 2.
+                # If Sheet 2 uses a different column for YES/NO, modify mark_as_yes/no to support dynamic columns!
+                print(f"Updating Sheet 2...")
+                mark_as_yes(sheet2, row_num_s2)
         else:
+            # Update Sheet 1
             if current_status not in ['YES']:
-                mark_as_no(sheet1, row_num)
+                print(f"Updating Sheet 1...")
+                mark_as_no(sheet1, row_num_s1)
+            
+            # 🌟 Update Sheet 2
+            if row_num_s2:
+                print(f"Updating Sheet 2...")
+                mark_as_no(sheet2, row_num_s2)
 
     return datetime.now()
-
 # ────────────────────────────────────────────────
 # Monthly Report
 # ────────────────────────────────────────────────
