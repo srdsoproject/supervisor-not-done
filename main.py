@@ -22,7 +22,7 @@ SCOPES = [
 ]
 
 # Paths and IDs loaded from environment variables
-CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'credentials.json')
+CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'GOOGLE_CREDENTIALS')
 SHEET1_ID = os.getenv('GOOGLE_SHEET1_ID')
 SHEET2_ID = os.getenv('GOOGLE_SHEET2_ID')
 WORKSHEET2_NAME = os.getenv('GOOGLE_WORKSHEET2_NAME', 'Inspections')
