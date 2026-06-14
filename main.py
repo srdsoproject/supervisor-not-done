@@ -40,7 +40,7 @@ EMAIL_RECEIVER = os.getenv('EMAIL_RECEIVER')
 # ────────────────────────────────────────────────
 
 def get_client():
-    creds_json = os.getenv('GOOGLE_CREDS_JSON')
+    creds_json = os.getenv('GOOGLE_CREDENTIALS')
     if creds_json:
         info = json.loads(creds_json)
         return gspread.authorize(Credentials.from_service_account_info(info, scopes=SCOPES))
