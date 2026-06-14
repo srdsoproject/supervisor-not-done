@@ -103,7 +103,7 @@ def mark_as_yes(sheet, row_num):
 
 def mark_as_no(sheet, row_num):
     try:
-        sheet.update(f'F{row_num}', [['NO']], value_input_option='RAW')
+        sheet.update(range_name=f'F{row_num}', values=[['NO']], value_input_option='RAW')
         format_cell_range(sheet, f'F{row_num}:G{row_num}', CellFormat(
             textFormat=TextFormat(foregroundColor=RED)
         ))
