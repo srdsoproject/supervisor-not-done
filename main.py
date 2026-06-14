@@ -22,7 +22,7 @@ SCOPES = [
 ]
 
 # Paths and IDs loaded from environment variables
-CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'GOOGLE_CREDENTIALS')
+CREDS_FILE = os.getenv('GOOGLE_CREDS_FILE', 'credentials.json')
 SHEET1_ID = os.getenv('GOOGLE_SHEET1_ID')
 SHEET2_ID = os.getenv('GOOGLE_SHEET2_ID')
 WORKSHEET2_NAME = os.getenv('GOOGLE_WORKSHEET2_NAME', 'Inspections')
@@ -40,8 +40,7 @@ EMAIL_RECEIVER = os.getenv('EMAIL_RECEIVER')
 # ────────────────────────────────────────────────
 
 def get_client():
-    # 🌟 FIXED: Changed from 'GOOGLE_CREDS_JSON' to 'GOOGLE_CREDENTIALS' to match your Workflow YAML
-    creds_json = os.getenv('GOOGLE_CREDENTIALS')
+    creds_json = os.getenv('GOOGLE_CREDS_JSON')
     if creds_json:
         info = json.loads(creds_json)
         return gspread.authorize(Credentials.from_service_account_info(info, scopes=SCOPES))
@@ -98,9 +97,9 @@ def mark_as_yes(sheet, row_num):
         format_cell_range(sheet, f'F{row_num}:G{row_num}', CellFormat(
             textFormat=TextFormat(foregroundColor=None)
         ))
-        print(f"    → Marked as YES at row {row_num}")
+        print(f"   → Marked as YES at row {row_num}")
     except Exception as e:
-        print(f"    Failed to mark YES at row {row_num}: {e}")
+        print(f"   Failed to mark YES at row {row_num}: {e}")
 
 def mark_as_no(sheet, row_num):
     try:
@@ -108,9 +107,9 @@ def mark_as_no(sheet, row_num):
         format_cell_range(sheet, f'F{row_num}:G{row_num}', CellFormat(
             textFormat=TextFormat(foregroundColor=RED)
         ))
-        print(f"    ❌ Marked as NO at row {row_num}")
+        print(f"   ❌ Marked as NO at row {row_num}")
     except Exception as e:
-        print(f"    Failed to mark NO at row {row_num}: {e}")
+        print(f"   Failed to mark NO at row {row_num}: {e}")
 
 # ────────────────────────────────────────────────
 # Main Processing
@@ -123,7 +122,7 @@ def process_new_inspections():
 
     client = get_client()
     worksheet_name = get_current_worksheet_name() # Dynamically calculates "June 26"
-    
+ 
     print(f"Processing worksheet: {worksheet_name}")
 
     try:
@@ -138,7 +137,7 @@ def process_new_inspections():
     today_dd_mm_yyyy = today.strftime('%d/%m/%Y')
     today_dd_mm_dash = today.strftime('%d-%m-%Y')
 
-    # Read Main Sheet (Sheet 1)
+    # Read Main Sheet
     try:
         data1 = retry_api_call(lambda: sheet1.get_all_values())
         print(f"Read {len(data1)} rows from main sheet")
@@ -159,8 +158,8 @@ def process_new_inspections():
 
         is_today = False
         if date_b:
-            if (today_yyyy_mm_dd in date_b or 
-                today_dd_mm_yyyy in date_b or 
+            if (today_yyyy_mm_dd in date_b or
+                today_dd_mm_yyyy in date_b or
                 today_dd_mm_dash in date_b):
                 is_today = True
 
@@ -168,11 +167,11 @@ def process_new_inspections():
             norm_phone = normalize_phone(raw_phone)
             if norm_phone:
                 today_rows[norm_phone] = (i, current_status)
-                print(f"   Found today's row {i} in Sheet1 → Phone: {norm_phone} | Status: {current_status}")
+                print(f"   Found today's row {i} → Phone: {norm_phone} | Status: {current_status}")
 
     print(f"→ Found {len(today_rows)} officer(s) scheduled for today")
 
-    # Read Inspections Sheet (Sheet 2)
+    # Read Inspections Sheet
     try:
         data2 = retry_api_call(lambda: sheet2.get_all_values())
     except Exception as e:
@@ -180,9 +179,8 @@ def process_new_inspections():
         return None
 
     today_inspections = set()
-    today_inspections_rows = {} # 🌟 Maps norm_phone → row_num in Sheet 2
 
-    for i, row in enumerate(data2[1:], start=2):
+    for row in data2[1:]:
         if len(row) < 4:
             continue
         date_str = (row[0] or '').strip()
@@ -192,34 +190,17 @@ def process_new_inspections():
             norm_phone = normalize_phone(phone_raw)
             if norm_phone:
                 today_inspections.add(norm_phone)
-                today_inspections_rows[norm_phone] = i # 🌟 Store row index for Sheet 2
 
     print(f"→ Found {len(today_inspections)} inspection(s) completed today")
 
-    # 2. Update today's rows on BOTH sheets
-    for norm_phone, (row_num_s1, current_status) in today_rows.items():
-        row_num_s2 = today_inspections_rows.get(norm_phone) # 🌟 Find matching row for Sheet 2
-
+    # 2. Update exclusively today's rows (Safe from touching tomorrow's/future schedules)
+    for norm_phone, (row_num, current_status) in today_rows.items():
         if norm_phone in today_inspections:
-            # Update Sheet 1
             if current_status != 'YES':
-                print(f"Updating Sheet 1...")
-                mark_as_yes(sheet1, row_num_s1)
-            
-            # 🌟 Update Sheet 2 (Assuming Column F handles tracking statuses here as well)
-            if row_num_s2:
-                print(f"Updating Sheet 2...")
-                mark_as_yes(sheet2, row_num_s2)
+                mark_as_yes(sheet1, row_num)
         else:
-            # Update Sheet 1
             if current_status not in ['YES']:
-                print(f"Updating Sheet 1...")
-                mark_as_no(sheet1, row_num_s1)
-            
-            # 🌟 Update Sheet 2
-            if row_num_s2:
-                print(f"Updating Sheet 2...")
-                mark_as_no(sheet2, row_num_s2)
+                mark_as_no(sheet1, row_num)
 
     return datetime.now()
 
@@ -289,8 +270,8 @@ Officers with NO inspection:
 
 if __name__ == '__main__':
     print(f"🚀 Inspection Monitor Started - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
+ 
     process_new_inspections()
     send_monthly_report()
-    
+ 
     print("✅ Workflow completed successfully.")
